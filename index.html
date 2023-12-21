@@ -6,56 +6,93 @@
   <title>WebRTC Chat</title>
 </head>
 <body>
-<video id="localStream" width="300"></video>
-<!-- <button>click</button> -->
-<video id="remoteStream" width="300"></video>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <!-- <script sArc="peer.js"></script> -->
+  <audio id="localAudio" width="300" autoplay></audio>
+  <audio id="remoteAudio" width="300" autoplay></audio>
   <h1 id="he"></h1>
   <input type="text" id="remoteId" >
-  <button id="btnCall" width="15px"></button>
+  <button id="btnCall">Call</button>
+  <button id="btnToggleMic">Toggle Microphone</button> 
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+  <script>
+    function openStream() {
+      const config = { audio: true, video: false };
+      return navigator.mediaDevices.getUserMedia(config);
+    }
+
+    let micEnabled = true;
+    let localStream;
+
+    function toggleMicrophone() {
+      if (localStream) {
+        const audioTracks = localStream.getAudioTracks();
+        console.log('Audio tracks:', audioTracks);
+        if (audioTracks.length > 0) {
+          micEnabled = !micEnabled;
+
+          audioTracks.forEach(track => {
+            console.log('hello',track.enabled);
+            track.enabled = micEnabled;
+            console.log('hello1',track.enabled);
+          });
+
+          console.log(`Microphone is ${micEnabled ? 'enabled' : 'disabled'}`);
+        }
+      }
+    }
+
+    // function showLocalStream() {
+    //   openStream()
+    //     .then(stream => {
+    //       localStream = stream;
+    //       document.getElementById('localAudio').srcObject = stream;
+    //     })
+    //     .catch(error => {
+    //       console.error('Error accessing microphone:', error);
+    //     });
+    // }
+
+    // window.onload = showLocalStream;
+
+    document.getElementById('btnToggleMic').addEventListener('click', toggleMicrophone);
+
+    function playStream(idAudioTag, stream) {
+      const audio = document.getElementById(idAudioTag);
+      audio.srcObject = stream;
+      audio.play();
+    }
+
+    var peer = new Peer();
+    var he = document.querySelector("#he");
+
+    peer.on('open', function(id) {
+      console.log('My peer ID is: ' + id);
+      he.textContent = id;
+    });
+
+    var btnCall = document.querySelector("#btnCall");
+    btnCall.onclick = function() {
+      const id = document.querySelector("#remoteId").value;
+      openStream()
+        .then(stream => {
+          localStream = stream;
+          playStream('localAudio', stream);
+          const call = peer.call(id, stream);
+          call.on('stream', remoteStream => playStream('remoteAudio', remoteStream));
+        });
+    };
+
+    peer.on('call', function(call) {
+      openStream()
+        .then(stream => {
+          localStream = stream;
+          call.answer(stream);
+          playStream('localAudio', stream);
+          call.on('stream', remoteStream => playStream('remoteAudio', remoteStream));
+        });
+    });
+  </script>
 </body>
 </html>
-<script>
-  // const socket = io('https://webrtc-6g2d.onrender.com');
-function openStream(){
-  const config={audio:true,video:true};
-  return navigator.mediaDevices.getUserMedia(config);
-}
-function playStream(idVideoTag,stream){
-const video=document.getElementById(idVideoTag);
-video.srcObject=stream;
-video.play();
-}
-
-// openStream().then(stream=>playStream('localStream',stream));
-var peer = new Peer();
-// on open will be launch when you successfully connect to PeerServer
-var he=document.querySelector("#he");
-peer.on('open', function(id) {
-	console.log('My peer ID is: ' + id);
-
-  console.log(he);
-  he.textContent=id;
-  });
-
-  var btnCall=document.querySelector("#btnCall");
-  btnCall.onclick=function(){
-    const id=document.querySelector("#remoteId").value;
-    openStream()
-    .then(stream=>{
-      playStream('localStream',stream);
-    const call=peer.call(id,stream);
-    call.on('stream',remoteStream=>playStream('remoteStream',remoteStream));
-  })}
-
-  peer.on('call',call=>{
-    openStream().
-    then(stream=>{
-      call.answer(stream);
-      playStream('localStream',stream);
-      call.on("stream",remoteStream=>playStream('remoteStream',remoteStream));
-    });
-  });
-</script>
