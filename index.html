@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Chat</title>
+</head>
+<body>
+<video id="localStream" width="300"></video>
+<!-- <button>click</button> -->
+<video id="remoteStream" width="300"></video>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- <script sArc="peer.js"></script> -->
+  <h1 id="he"></h1>
+  <input type="text" id="remoteId" >
+  <button id="btnCall" width="15px"></button>
+</body>
+</html>
+<script>
+function openStream(){
+  const config={audio:true,video:true};
+  return navigator.mediaDevices.getUserMedia(config);
+}
+function playStream(idVideoTag,stream){
+const video=document.getElementById(idVideoTag);
+video.srcObject=stream;
+video.play();
+}
+
+// openStream().then(stream=>playStream('localStream',stream));
+var peer = new Peer();
+// on open will be launch when you successfully connect to PeerServer
+var he=document.querySelector("#he");
+peer.on('open', function(id) {
+	console.log('My peer ID is: ' + id);
+
+  console.log(he);
+  he.textContent=id;
+  });
+
+  var btnCall=document.querySelector("#btnCall");
+  btnCall.onclick=function(){
+    const id=document.querySelector("#remoteId").value;
+    openStream()
+    .then(stream=>{
+      playStream('localStream',stream);
+    const call=peer.call(id,stream);
+    call.on('stream',remoteStream=>playStream('remoteStream',remoteStream));
+  })}
+
+  peer.on('call',call=>{
+    openStream().
+    then(stream=>{
+      call.answer(stream);
+      playStream('localStream',stream);
+      call.on("stream",remoteStream=>playStream('remoteStream',remoteStream));
+    });
+  });
+</script>
